@@ -92,23 +92,24 @@ fn load_repos(filepath: &str) -> Result<RepositoryData, Box<dyn std::error::Erro
 fn main() {
     let json_str = fs::read_to_string("/Users/charlierothschild/Desktop/internship_projects/EC-developer-analysis/data/processed/github_repos.json").expect("failed to read file");    
     
-    let string_list: Vec<String> = serde_json::from_str(&json_str).expect("Failed to parse JSON");
+    let repo_list: Vec<String> = serde_json::from_str(&json_str).expect("Failed to parse JSON");
 
-    let repo_data: RepositoryData = string_list
-        .into_iter()
-        .map(|repo_name| (repo_name.to_string(), Vec::new()))
-        .collect();
-    for (i, key) in repo_data.keys().take(10).enumerate() {
-        println!("{}: {}", i + 1, key);
+    for (i, item) in repo_list.iter().take(10).enumerate() {
+        println!("{}: {}", i + 1, item);
     }
 
     // Loading batch_378.json
-    match load_repos("data/batch_378.json") {
-        Ok(repo_data) => {
-            println!("Loaded {} repositories", repo_data.len());
-        }
+    let repo_data = match load_repos("data/batch_378.json") {
+        Ok(data) => data,
         Err(e) => {
-            eprintln!("Error loading repos: {}", e)
+            eprintln!("Error loading repos: {}", e);
+            return
         }
+    };
+    // print the first 10 keys
+    for (idx, key) in repo_data.keys().take(10).enumerate() { 
+        println!("{}: {}", idx, key);
     }
+
+
 }
