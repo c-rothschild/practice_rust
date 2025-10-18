@@ -1,115 +1,131 @@
+mod models;
+
+use models::*;
+
 use serde_json;
 use std::fs;
-use serde::{Deserialize, Serialize};
+use glob::glob;
+
 use std::collections::HashMap;
 
-//Main structure - a map of repo names to commit arrays
-type RepositoryData = HashMap<String, Vec<Commit>>;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Commit {
-    pub sha: String,
-    pub node_id: String,
-    pub commit: CommitDetails,
-    pub url: String,
-    pub html_url: String,
-    pub comments_url: String,
-    pub author: Option<User>,
-    pub committer: Option<User>,
-    pub parents: Vec<Parent>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CommitDetails {
-    pub author: CommitAuthor,
-    pub committer: CommitAuthor,
-    pub message: String,
-    pub tree: Tree,
-    pub url: String,
-    pub comment_count: u32,
-    pub verification: Verification,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CommitAuthor {
-    pub name: String,
-    pub email: String,
-    pub date: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Tree {
-    pub sha: String,
-    pub url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Verification {
-    pub verified: bool,
-    pub reason: String,
-    pub signature: Option<String>,
-    pub payload: Option<String>,
-    pub verified_at: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct User {
-    pub login: String,
-    pub id: u64,
-    pub node_id: String,
-    pub avatar_url: String,
-    pub gravatar_id: String,
-    pub url: String,
-    pub html_url: String,
-    pub followers_url: String,
-    pub following_url: String,
-    pub gists_url: String,
-    pub starred_url: String,
-    pub subscriptions_url: String,
-    pub organizations_url: String,
-    pub repos_url: String,
-    pub events_url: String,
-    pub received_events_url: String,
-    pub r#type: String,
-    pub user_view_type: String,
-    pub site_admin: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Parent {
-    pub sha: String,
-    pub url: String,
-    pub html_url: String
-}
-
-fn load_repos(filepath: &str) -> Result<RepositoryData, Box<dyn std::error::Error>> {
+fn load_repo_file(filepath: &str) -> Result<RepositoryData, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(filepath)?;
     let repo_data: RepositoryData = serde_json::from_str(&json_str)?;
     Ok(repo_data)
 }
 
+fn find_files(pattern: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut files = Vec::new();
 
-fn main() {
-    let json_str = fs::read_to_string("/Users/charlierothschild/Desktop/internship_projects/EC-developer-analysis/data/processed/github_repos.json").expect("failed to read file");    
-    
-    let repo_list: Vec<String> = serde_json::from_str(&json_str).expect("Failed to parse JSON");
-
-    for (i, item) in repo_list.iter().take(10).enumerate() {
-        println!("{}: {}", i + 1, item);
+    for entry in glob(pattern)? {
+        let path = entry?;
+        files.push(path.to_string_lossy().to_string());
     }
 
-    // Loading batch_378.json
-    let repo_data = match load_repos("data/batch_378.json") {
+    Ok(files)
+
+}
+
+// add commits from a filepath to our commit count dict
+fn add_to_commit_count(filepath: &str, commit_counts: &mut HashMap<String, UserCommitCounts>) {
+
+    let repo_data = match load_repo_file(filepath) {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Error loading repos: {}", e);
+            return;
+        }
+    };
+
+    // loop through each repo in repo_data
+    for (repo_name, commits) in repo_data {
+        if commits.is_empty() {
+            continue;
+        }
+
+        // loop through each commit in the repo
+        for commit in commits {
+
+            let author_login = match &commit.author {
+                Some(user) => {
+                    match &user.login {
+                        Some(login) => login,
+                        None => {
+                            continue;
+                        }
+                    }
+                }
+                None => {
+                    // Skip commits without author info
+                    continue;
+                }
+            };
+
+            // Modify the author's user_commit_counts entry
+
+            let user_stats = commit_counts
+                .entry(author_login.clone())
+                .or_insert(UserCommitCounts {
+                    total_commits: 0,
+                    repo_commits: HashMap::new(),
+                });
+            
+            user_stats.total_commits += 1;
+            
+            *user_stats.repo_commits
+                .entry(repo_name.clone())
+                .or_insert(0) += 1;
+
+        }
+
+    }
+
+
+
+}
+
+fn save_to_json(commit_counts: &HashMap<String, UserCommitCounts>, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let json_string = serde_json::to_string_pretty(commit_counts)?;
+    fs::write(filepath, json_string)?;
+    Ok(())
+}
+
+
+fn main() {
+    let batch_files = match find_files("/Users/charlierothschild/Desktop/internship_projects/EC-developer-analysis/data/processed/commit_histories*/batch_*.json") {
+        Ok(files) => {
+            println!("Found {} files", files.len());
+            files
+        }
+        Err(e) => {
+            eprintln!("Error finding files: {}", e);
             return
         }
     };
-    // print the first 10 keys
-    for (idx, key) in repo_data.keys().take(10).enumerate() { 
-        println!("{}: {}", idx, key);
+    let mut commit_counts = HashMap::<String, UserCommitCounts>::new();
+
+    for filepath in batch_files.iter() {
+        println!("Processing: {}", filepath);
+        add_to_commit_count(filepath, &mut commit_counts);
+    };
+
+    for (idx, (author, stats)) in commit_counts.iter().take(3).enumerate() {
+        println!("{}. {}: {} total commits", idx + 1, author, stats.total_commits);
+
+        for (repo, count) in &stats.repo_commits {
+            println!("     {}: {} commits", repo, count);
+        }
+    };
+
+    let filepath = "data/commit_counts.json";
+
+    match save_to_json(&commit_counts, &filepath) {
+        Ok(_) => println!("Successfully saved to {}", filepath),
+        Err(e) => eprintln!("Error saving file: {}", e),
     }
 
+    
+    
 
 }
