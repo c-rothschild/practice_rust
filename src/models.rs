@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 //Main structure - a map of repo names to commit arrays
-pub type RepositoryData = HashMap<String, Vec<Commit>>;
+pub type RepoDicts = HashMap<String, Vec<Commit>>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Commit {
@@ -50,7 +50,7 @@ pub struct Verification {
     pub verified_at: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub login: Option<String>,         // Make optional
     pub id: Option<u64>,                // Make optional
@@ -80,7 +80,7 @@ pub struct Parent {
     pub html_url: String
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserCommitCounts {
     pub total_commits: u32,
     pub repo_commits: HashMap<String, u32>,
