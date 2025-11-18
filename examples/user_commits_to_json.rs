@@ -1,6 +1,5 @@
-mod models;
 
-use models::UserCommitCounts;
+use practice_rust::models::UserCommitCounts;
 
 use serde_json;
 use std::fs;
@@ -10,7 +9,7 @@ use std::fs::File;
 
 use std::collections::HashMap;
 
-use practice_rust::{load_repo_file, find_files}
+use practice_rust::{load_repo_file, find_files};
 
 
 

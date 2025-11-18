@@ -13,6 +13,8 @@ fn find_files(pattern: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> 
 }
 
 
+
+
 fn main() {
     let batch_files = match find_files("/Users/charlierothschild/Desktop/internship_projects/EC-developer-analysis/data/processed/commit_histories*/batch_*.json") {
         Ok(files) => {

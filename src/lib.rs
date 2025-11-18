@@ -4,8 +4,7 @@ use serde_json;
 use glob::glob;
 use std::fs;
 use serde::Serialize;
-use models::{RepoDicts, UserCommitCounts};
-use std::collections::HashMap;
+use models::RepoDicts;
 
 pub fn load_repo_file(filepath: &str) -> Result<RepoDicts, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(filepath)?;
@@ -17,7 +16,7 @@ pub fn save_to_json<T>(data: &T, filepath: &str) -> Result<(), Box<dyn std::erro
 where
     T: Serialize,
 {
-    let json_string = serde_json::to_string_pretty(data)?;
+    let json_string: String = serde_json::to_string_pretty(data)?;
     fs::write(filepath, json_string)?;
     Ok(())
 }
