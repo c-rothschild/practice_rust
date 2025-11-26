@@ -1,10 +1,12 @@
 pub mod models;
+pub mod generate_user_dict;
 
 use serde_json;
 use glob::glob;
 use std::fs;
 use serde::Serialize;
 use models::RepoDicts;
+
 
 pub fn load_repo_file(filepath: &str) -> Result<RepoDicts, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(filepath)?;

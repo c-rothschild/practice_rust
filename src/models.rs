@@ -126,26 +126,24 @@ pub struct CommitDictEntry {
     pub repo_name: String,
     pub sha: String,
     pub author: String,
-    pub committer: String,
     pub date: String,
-    pub message: String,
-    pub url: String,
-    pub comment_count: u32,
 }
 
 
 
 impl Commit {
     pub fn to_dict_entry(&self, repo_name: &str) -> CommitDictEntry {
+        // Get author login from self.author if available, otherwise fall back to commit.author.name
+        let author_login = self.author
+            .as_ref()
+            .and_then(|a| a.login.clone())
+            .unwrap_or_else(|| self.commit.author.name.clone());
+
         CommitDictEntry { 
             repo_name: repo_name.to_string(), 
             sha: self.sha.clone(), 
-            author: self.commit.author.name.clone(),
-            committer: self.commit.committer.name.clone(),
+            author: author_login,
             date: self.commit.committer.date.clone(),
-            message: self.commit.message.clone(),
-            url: self.url.clone(), 
-            comment_count: self.commit.comment_count.clone(),
          }
     }
 }

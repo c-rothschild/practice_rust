@@ -1,9 +1,7 @@
-
-
-use practice_rust::models::{User, CommitDictEntry, Commit};
+use crate::models::{User, CommitDictEntry, Commit};
 use std::collections::HashMap;
 use std::error::Error;
-use practice_rust::load_repo_file;
+use crate::load_repo_file;
 
 pub fn add_to_user_dict(filepath: &str, user_dict: &mut HashMap<String, User>) -> Result<(), Box<dyn Error>> {
     let repo_data = match load_repo_file(filepath) {
